@@ -1,9 +1,20 @@
 #pragma once
 
 #include <iterator>
+#include <assert.h>
+
+void print(std::string str){
+    std::cout<<str<<std::endl;
+}
+
+
+struct Exception_go_out_of_memory
+{
+    std::string ex = "go_out_of_memory";
+};
 
 /// @brief Структура для хранения в памяти
-template<typename T>
+template <typename T>
 struct single_element
 {
     void *next_element = nullptr;
@@ -16,12 +27,48 @@ template <typename T>
 class iter : public std::iterator<std::input_iterator_tag, T>
 {
 private:
-    //friend class My_container;
-
-        T /* data */;
+    T *data;
 
 public:
-    iter(T /* args */);
+    iter(T *arg)
+    {
+        this->data = arg;
+    };
+
+    bool operator==(const iter<T> *iter)
+    {
+        if (this->data->element == iter->data)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool operator !=(const iter<T> *iter){
+        if(!this==iter) return true;
+        return false;
+    }
+
+    iter *operator+()
+    {
+        if (data->next_element != nullptr)
+        {
+            this->data = (T *)data->next_element;
+            return this;
+        }
+        else
+        {
+            throw std::exception();
+            return this;
+        }
+    }
+
+    T& operator *(){
+        return *(this->data->element);
+    }
 };
 // TODO: Сделать реализацию методов аллокатора
 /// @brief Аллокатор для контейнера
@@ -32,23 +79,25 @@ class my_allocator
 private:
     T /* data */;
 
-    // void check_assert(){
-    //     static_assert(!std::is_same<T,void>,"Type allocator cant be void \n");
-    // }
-    void create(){
-
+    void check_assert(){
+        auto a = !std::is_same<T,void>();
+        print("Аллокатор параметризован типом void ");
+        assert(a);
     }
-    void allocate(){
-
+    void create()
+    {
     }
-    void deallocate(){
-
+    void allocate()
+    {
     }
-    void free(){
-
+    void deallocate()
+    {
     }
-    void destroy(){
-
+    void free()
+    {
+    }
+    void destroy()
+    {
     }
 
 public:
@@ -96,5 +145,25 @@ public:
 
     void push_front(T *element)
     {
+    }
+
+    iterator begin()
+    {
+        return iterator(first_element);
+    }
+
+    const_iterator cbegin()
+    {
+        return const_iterator(first_element);
+    }
+
+    iterator end()
+    {
+        return iterator(nullptr);
+    }
+
+    const_iterator cend()
+    {
+        return const_iterator(nullptr);
     }
 };
