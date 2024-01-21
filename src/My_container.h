@@ -106,7 +106,7 @@ public:
 
 /// @brief Класс кастомного контейнера
 /// @tparam T параметр класса в котором бубет храниться элемент
-template <typename T>
+template <typename T,typename allocat = std::allocator_traits<T>>
 class My_container
 {
 private:
@@ -116,6 +116,8 @@ private:
     using iterator = iter<single_element<T>>;
     using const_iterator = iter<const single_element<T>>;
     using allocator = my_allocator<single_element<T>>;
+    
+    
 
 public:
     My_container(int reserved_size){

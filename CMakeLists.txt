@@ -20,7 +20,7 @@ set(PROJECT_VESRION 0.0.${PATCH_VERSION})
 
 
 project(Homework3 VERSION ${PROJECT_VESRION})
-
+# Добавление Boost Test
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 set(Boost_DEBUG OFF)
 if(Boost_FOUND)
@@ -29,6 +29,33 @@ else()
     exit_cmake()
 endif()
 
+# Добавление GTest
+
+if ($ENV{GOOGLETEST_DIR})
+    get_filename_component(_GTEST_BASE $ENV{GOOGLETEST_DIR} REALPATH)
+elseif (EXISTS "") # set by QC
+    get_filename_component(_GTEST_BASE "" REALPATH) # set by QC
+endif()
+
+if (NOT GTEST_ROOT)
+    if (_GTEST_BASE)
+        message("Setting GTEST_ROOT to ${_GTEST_BASE}")
+        set(GTEST_ROOT ${_GTEST_BASE})
+    else()
+        message("No GTEST_ROOT specified - using system defaults.")
+    endif()
+endif()
+
+find_package(GTest REQUIRED)
+if (NOT GTest_FOUND)
+    message (FATAL_ERROR "No GTest Found")
+endif()
+##
+
+
+
+
+
 include(CTest)
 enable_testing()
 
@@ -36,6 +63,7 @@ include_directories(src)
 
 add_executable(Homework3 main.cpp)
 add_executable(test_version testing_project.cpp)
+add_executable(g_test main.cpp tst_g_test.cpp)
 
 set_target_properties(Homework3   PROPERTIES
     CXX_STANDARD 17
@@ -83,4 +111,5 @@ include(CPack)
 enable_testing()
 message(STATUS ${PROJECT_VERSION})
 add_test(test_version test_version)
+add_test(NAME g_test COMMAND g_test)
 include(CPack)
