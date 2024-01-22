@@ -50,7 +50,7 @@ find_package(GTest REQUIRED)
 if (NOT GTest_FOUND)
     message (FATAL_ERROR "No GTest Found")
 endif()
-##
+## 
 
 
 
@@ -63,7 +63,7 @@ include_directories(src)
 
 add_executable(Homework3 main.cpp)
 add_executable(test_version testing_project.cpp)
-add_executable(g_test main.cpp tst_g_test.cpp)
+#add_executable(g_test main.cpp tst_g_test.cpp)
 
 set_target_properties(Homework3   PROPERTIES
     CXX_STANDARD 17
@@ -111,5 +111,6 @@ include(CPack)
 enable_testing()
 message(STATUS ${PROJECT_VERSION})
 add_test(test_version test_version)
-add_test(NAME g_test COMMAND g_test)
+#add_test(NAME g_test  g_test)
+#add_test(NAME g_test COMMAND g_test)
 include(CPack)

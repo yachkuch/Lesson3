@@ -20,7 +20,7 @@ struct single_element
     void *next_element = nullptr;
     T *element;
 };
-// TODO: Написать реализациб методов итратора
+// WARNING: Написать реализациб методов итратора
 /// @brief Итератор для класса My_container
 /// @tparam T
 template <typename T>
