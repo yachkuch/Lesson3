@@ -1,12 +1,21 @@
 #pragma once
 
-#include <iterator>
 #include <assert.h>
+#include <iterator>
+#include <memory>
+#include <iostream>
 
-void print(std::string str){
-    std::cout<<str<<std::endl;
-}
+void print(std::string str) { std::cout << str << std::endl; }
 
+struct deleter
+{
+    void operator()(void *ptr) { ::operator delete(ptr); }
+};
+
+// Опробовал перегрузку оператора new
+// void * operator new(std::size_t sz){
+//     std::cout<<"Мой оператор new"<<std::endl;
+// }
 
 struct Exception_go_out_of_memory
 {
@@ -30,10 +39,7 @@ private:
     T *data;
 
 public:
-    iter(T *arg)
-    {
-        this->data = arg;
-    };
+    iter(T *arg) { this->data = arg; };
 
     bool operator==(const iter<T> *iter)
     {
@@ -47,8 +53,10 @@ public:
         }
     }
 
-    bool operator !=(const iter<T> *iter){
-        if(!this==iter) return true;
+    bool operator!=(const iter<T> *iter)
+    {
+        if (!this == iter)
+            return true;
         return false;
     }
 
@@ -66,47 +74,90 @@ public:
         }
     }
 
-    T& operator *(){
-        return *(this->data->element);
-    }
+    T &operator*() { return *(this->data->element); }
 };
 // TODO: Сделать реализацию методов аллокатора
 /// @brief Аллокатор для контейнера
 /// @tparam T
-template <typename T>
+template <class T /*,int size = 1000*/>
 class my_allocator
 {
 private:
-    T /* data */;
+    constexpr static int poolSize = 20;
+    void *last_free_elem = nullptr;
+    
+    int number_allocate_elements = 0;
 
-    void check_assert(){
-        auto a = !std::is_same<T,void>();
-        print("Аллокатор параметризован типом void ");
+    void check_assert()
+    {
+        auto a = !std::is_same<T, void>();
+        print("allocate paromitrase void ");
         assert(a);
-    }
-    void create()
-    {
-    }
-    void allocate()
-    {
-    }
-    void deallocate()
-    {
-    }
-    void free()
-    {
-    }
-    void destroy()
-    {
     }
 
 public:
-    my_allocator(T /* args */);
+    std::shared_ptr<void> pool;
+    using value_type = T;
+
+    using propagate_on_container_copy_assignment = std::true_type;
+    using propagate_on_container_move_assignment = std::true_type;
+    using propagate_on_container_swap =
+        std::true_type; // UB if std::false_type and a1 != a2;
+
+    my_allocator() noexcept : pool(new(std::nothrow) T[poolSize])
+    {
+        check_assert();
+    };
+
+    template <class U>
+    my_allocator(const my_allocator<U> &alloc) noexcept
+    {
+        pool = alloc.pool;
+    }
+
+    my_allocator<T> select_on_container_copy_construction() const
+    {
+        std::cout << "select_on_container_copy_construction()" << std::endl;
+        return my_allocator<T>();
+    }
+    T *allocate(std::size_t n)
+    {            
+        if (n <= poolSize)
+        {
+
+            return static_cast<T *>(::operator new(n * sizeof(T)));
+        }
+        else
+        {
+            std::bad_alloc();
+        }
+    }
+    void deallocate(T *p, std::size_t n) { ::operator delete(p); }
+
+    template <typename U>
+    struct rebind
+    {
+        typedef class my_allocator<U> other;
+    };
 };
+
+template <class T, class U>
+constexpr bool operator==(const my_allocator<T> &a1,
+                          const my_allocator<U> &a2) noexcept
+{
+    return a1.pool == a2.pool;
+}
+
+template <class T, class U>
+constexpr bool operator!=(const my_allocator<T> &a1,
+                          const my_allocator<U> &a2) noexcept
+{
+    return a1.pool != a2.pool;
+}
 
 /// @brief Класс кастомного контейнера
 /// @tparam T параметр класса в котором бубет храниться элемент
-template <typename T,typename allocat = std::allocator_traits<T>>
+template <typename T, typename allocat = std::allocator<T>>
 class My_container
 {
 private:
@@ -115,9 +166,13 @@ private:
 
     using iterator = iter<single_element<T>>;
     using const_iterator = iter<const single_element<T>>;
-    using allocator = my_allocator<single_element<T>>;
-    
-    
+    using allocator = allocat;
+
+    // using для перемещений
+
+    //! Текущий размер
+    std::size_t size = 0;
+    std::size_t capcity = 0; // Сколько памяти отсалось зарезервированной
 
 public:
     My_container(int reserved_size){
@@ -126,46 +181,21 @@ public:
 
     My_container() = default;
 
-    int size()
-    {
-        return size;
-    }
+    int size_() { return this->size; }
 
-    T at(int a)
-    {
-        return this->this_element->element;
-    }
+    T at(int a) { return this->this_element->element; }
 
-    bool contain()
-    {
-        return false;
-    }
+    bool contain() { return false; }
 
-    void push_back(T *element)
-    {
-    }
+    void push_back(T *element) {}
 
-    void push_front(T *element)
-    {
-    }
+    void push_front(T *element) {}
 
-    iterator begin()
-    {
-        return iterator(first_element);
-    }
+    iterator begin() { return iterator(first_element); }
 
-    const_iterator cbegin()
-    {
-        return const_iterator(first_element);
-    }
+    const_iterator cbegin() { return const_iterator(first_element); }
 
-    iterator end()
-    {
-        return iterator(nullptr);
-    }
+    iterator end() { return iterator(nullptr); }
 
-    const_iterator cend()
-    {
-        return const_iterator(nullptr);
-    }
+    const_iterator cend() { return const_iterator(nullptr); }
 };
