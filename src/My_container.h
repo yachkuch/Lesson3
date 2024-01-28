@@ -29,7 +29,6 @@ struct single_element
     void *next_element = nullptr;
     T *element;
 };
-// WARNING: Написать реализациб методов итратора
 /// @brief Итератор для класса My_container
 /// @tparam T
 template <typename T>
@@ -76,7 +75,6 @@ public:
 
     T &operator*() { return *(this->data->element); }
 };
-// TODO: Сделать реализацию методов аллокатора
 /// @brief Аллокатор для контейнера
 /// @tparam T
 template <class T /*,int size = 1000*/>
@@ -84,7 +82,6 @@ class my_allocator
 {
 private:
     constexpr static int poolSize = 20;
-    void *last_free_elem = nullptr;
     
     int number_allocate_elements = 0;
 
@@ -121,12 +118,14 @@ public:
         return my_allocator<T>();
     }
     T *allocate(std::size_t n)
-    {            
+    {       
+        if((number_allocate_elements+n) > poolSize) std::bad_alloc;     
         if (n <= poolSize)
         {
-
-            return static_cast<T *>(::operator new(n * sizeof(T)));
-        }
+            auto buff = number_allocate_elements;
+            number_allocate_elements+=n;
+            return (static_cast<T *>(pool.get()) + buff);
+            }
         else
         {
             std::bad_alloc();
@@ -163,12 +162,11 @@ class My_container
 private:
     single_element<T> *first_element = nullptr;
     single_element<T> *this_element = nullptr;
+    single_element<T> *last_element = nullptr;
 
     using iterator = iter<single_element<T>>;
     using const_iterator = iter<const single_element<T>>;
     using allocator = allocat;
-
-    // using для перемещений
 
     //! Текущий размер
     std::size_t size = 0;
@@ -184,18 +182,17 @@ public:
     int size_() { return this->size; }
 
     T at(int a) { return this->this_element->element; }
-
-    bool contain() { return false; }
-
-    void push_back(T *element) {}
-
-    void push_front(T *element) {}
+    // TODO: Доделать реализацию пуш бэка и все готово
+    void push_back(const T *element) {
+        typename allocat::template rebind<single_element<T>>::other nodeAlloc;
+        single_element<T>* newNode = nodeAlloc.allocate(1);
+    }
 
     iterator begin() { return iterator(first_element); }
 
     const_iterator cbegin() { return const_iterator(first_element); }
 
-    iterator end() { return iterator(nullptr); }
+    iterator end() { return iterator(last_element); }
 
-    const_iterator cend() { return const_iterator(nullptr); }
+    const_iterator cend() { return const_iterator(last_element); }
 };
