@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 
+
 void print(std::string str) { std::cout << str << std::endl; }
 
 struct deleter
@@ -27,7 +28,13 @@ template <typename T>
 struct single_element
 {
     void *next_element = nullptr;
-    T *element;
+    T element;
+    
+    single_element(T _val) : element(_val), next_element(nullptr){}
+    bool operator != (const  single_element & val ){
+        if((this->element == val.element) && (this->next_element == val.next_element)) return true;
+        return false;
+    }
 };
 /// @brief Итератор для класса My_container
 /// @tparam T
@@ -52,14 +59,14 @@ public:
         }
     }
 
-    bool operator!=(const iter<T> *iter)
+    bool operator!=(const iter<T> &iter)
     {
-        if (!this == iter)
+        if (!(this == &iter))
             return true;
         return false;
     }
 
-    iter *operator+()
+    iter *operator++()
     {
         if (data->next_element != nullptr)
         {
@@ -73,15 +80,22 @@ public:
         }
     }
 
-    T &operator*() { return *(this->data->element); }
+    T operator*() {
+        auto val = this->data;
+         return *val; }
 };
+
+
+
+
+
 /// @brief Аллокатор для контейнера
 /// @tparam T
-template <class T /*,int size = 1000*/>
+template <class T ,std::size_t size = 1000>
 class my_allocator
 {
 private:
-    constexpr static int poolSize = 20;
+    constexpr static int poolSize = size;
     
     int number_allocate_elements = 0;
 
@@ -96,6 +110,13 @@ public:
     std::shared_ptr<void> pool;
     using value_type = T;
 
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef std::size_t size_type;
+    typedef std::ptrdiff_t difference_type;
+
     using propagate_on_container_copy_assignment = std::true_type;
     using propagate_on_container_move_assignment = std::true_type;
     using propagate_on_container_swap =
@@ -106,8 +127,8 @@ public:
         check_assert();
     };
 
-    template <class U>
-    my_allocator(const my_allocator<U> &alloc) noexcept
+    template <class U,std::size_t M>
+    my_allocator(const my_allocator<U,M> &alloc) noexcept
     {
         pool = alloc.pool;
     }
@@ -131,12 +152,11 @@ public:
             std::bad_alloc();
         }
     }
-    void deallocate(T *p, std::size_t n) { ::operator delete(p); }
+    void deallocate(T *p, std::size_t n) { number_allocate_elements = 0; }
 
-    template <typename U>
-    struct rebind
-    {
-        typedef class my_allocator<U> other;
+    template<typename U>
+    struct rebind {
+        typedef my_allocator<U, size> other;
     };
 };
 
@@ -166,14 +186,14 @@ private:
 
     using iterator = iter<single_element<T>>;
     using const_iterator = iter<const single_element<T>>;
-    using allocator = allocat;
+    allocat alloc;
 
     //! Текущий размер
     std::size_t size = 0;
     std::size_t capcity = 0; // Сколько памяти отсалось зарезервированной
 
 public:
-    My_container(int reserved_size){
+    My_container(int reserved_size) :alloc(allocat()){
 
     };
 
@@ -183,9 +203,18 @@ public:
 
     T at(int a) { return this->this_element->element; }
     // TODO: Доделать реализацию пуш бэка и все готово
-    void push_back(const T *element) {
-        typename allocat::template rebind<single_element<T>>::other nodeAlloc;
-        single_element<T>* newNode = nodeAlloc.allocate(1);
+    void push_back(const T &element) {
+        // WARNING: Не очень понимаю данную строчку
+        //typename allocat::template rebind<single_element<T>>::other nodeAlloc;
+        //auto newNode = std::allocator_traits<T>::allocate(alloc,1);
+        allocat a();
+        //std::allocator_traits<allocat>::allocate(a,1);
+        if(first_element == nullptr){
+            //first_element = newNode;
+        }
+       // this_element->next_element = newNode;
+       // this_element = newNode;
+        //std::allocator_traits<T>::construct(alloc, newNode, x);
     }
 
     iterator begin() { return iterator(first_element); }
