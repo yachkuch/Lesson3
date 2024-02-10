@@ -107,7 +107,8 @@ private:
     }
 
 public:
-    std::shared_ptr<void> pool;
+    //std::shared_ptr<void> pool;
+    void *pool;
     using value_type = T;
 
     typedef value_type* pointer;
@@ -122,7 +123,7 @@ public:
     using propagate_on_container_swap =
         std::true_type; // UB if std::false_type and a1 != a2;
 
-    my_allocator() noexcept : pool(new(std::nothrow) T[poolSize])
+    my_allocator() noexcept : pool(malloc(sizeof(T)*poolSize))
     {
         check_assert();
     };
@@ -140,12 +141,12 @@ public:
     }
     T *allocate(std::size_t n)
     {       
-        if((number_allocate_elements+n) > poolSize) std::bad_alloc;     
+        if((number_allocate_elements+n) > poolSize) std::bad_alloc();     
         if (n <= poolSize)
         {
             auto buff = number_allocate_elements;
             number_allocate_elements+=n;
-            return (static_cast<T *>(pool.get()) + buff);
+            return static_cast<T *>(pool + buff);
             }
         else
         {
@@ -153,6 +154,15 @@ public:
         }
     }
     void deallocate(T *p, std::size_t n) { number_allocate_elements = 0; }
+
+    // template <class Up, class... Args>
+    // void construct(Up* p, Args&&... args) {
+    //     ::new ((void*)p) Up(std::forward<Args>(args)...);
+    // }
+
+    // void destroy(pointer p) {
+    //     p->~T();
+    // }
 
     template<typename U>
     struct rebind {
@@ -176,7 +186,7 @@ constexpr bool operator!=(const my_allocator<T> &a1,
 
 /// @brief Класс кастомного контейнера
 /// @tparam T параметр класса в котором бубет храниться элемент
-template <typename T, typename allocat = std::allocator<T>>
+template <typename T, typename allocat = std::allocator<single_element<T>>>
 class My_container
 {
 private:
@@ -205,16 +215,14 @@ public:
     // TODO: Доделать реализацию пуш бэка и все готово
     void push_back(const T &element) {
         // WARNING: Не очень понимаю данную строчку
-        //typename allocat::template rebind<single_element<T>>::other nodeAlloc;
-        //auto newNode = std::allocator_traits<T>::allocate(alloc,1);
-        allocat a();
-        //std::allocator_traits<allocat>::allocate(a,1);
+        typename allocat::template rebind<single_element<T>>::other nodeAlloc;
+        single_element<T> * newNode = nodeAlloc.allocate(1);
         if(first_element == nullptr){
-            //first_element = newNode;
+           // first_element = newNode;
         }
        // this_element->next_element = newNode;
        // this_element = newNode;
-        //std::allocator_traits<T>::construct(alloc, newNode, x);
+       // std::allocator_traits<T>::construct(alloc, newNode, element);
     }
 
     iterator begin() { return iterator(first_element); }

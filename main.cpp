@@ -47,8 +47,9 @@ int main(int, char **) {
   //Вектор с кастомным аллокатором
   std::vector<new_srt, my_allocator<new_srt>> vect3;
   new_srt a = {1,2};
+   new_srt a2 = {2,3};
   vect3.push_back(a);
-  vect3.push_back(a);
+  vect3.push_back(a2);
 
 
   for (const auto &el : vect3) {
