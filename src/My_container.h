@@ -123,7 +123,7 @@ public:
     using propagate_on_container_swap =
         std::true_type; // UB if std::false_type and a1 != a2;
 
-    my_allocator() noexcept : pool(malloc(sizeof(T)*poolSize))
+    my_allocator() noexcept : pool(::operator new(sizeof(T)*poolSize))
     {
         check_assert();
     };
@@ -215,8 +215,9 @@ public:
     // TODO: Доделать реализацию пуш бэка и все готово
     void push_back(const T &element) {
         // WARNING: Не очень понимаю данную строчку
-        typename allocat::template rebind<single_element<T>>::other nodeAlloc;
-        single_element<T> * newNode = nodeAlloc.allocate(1);
+        // typename allocat::template rebind<single_element<T>>::other nodeAlloc;
+        //single_element<T> * newNode = nodeAlloc.allocate(1);
+         T* newData = std::allocator_traits<T>::allocate(alloc, 1);
         if(first_element == nullptr){
            // first_element = newNode;
         }
