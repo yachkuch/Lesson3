@@ -146,7 +146,7 @@ public:
         {
             auto buff = number_allocate_elements;
             number_allocate_elements+=n;
-            return static_cast<T *>(pool + buff);
+            return static_cast<T *>(pool + buff*sizeof(T));
             }
         else
         {
