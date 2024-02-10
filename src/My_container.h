@@ -32,7 +32,12 @@ struct single_element
     
     single_element(T _val) : element(_val), next_element(nullptr){}
     bool operator != (const  single_element & val ){
-        if((this->element == val.element) && (this->next_element == val.next_element)) return true;
+        if((this->element == val.element) && (this->next_element == val.next_element)) return false;
+        return true;
+    }
+    bool operator ==(const  single_element & val){
+        if(&val == nullptr) return false;
+        if(((this->element == val.element) && (this->next_element == val.next_element)) ) return true;
         return false;
     }
 };
@@ -49,7 +54,7 @@ public:
 
     bool operator==(const iter<T> *iter)
     {
-        if (this->data->element == iter->data)
+        if (this->data == iter->data)
         {
             return true;
         }
@@ -61,9 +66,11 @@ public:
 
     bool operator!=(const iter<T> &iter)
     {
-        if (!(this == &iter))
-            return true;
-        return false;
+        //if(this->data->next_element == nullptr) return true;
+        //if(iter.data->next_element == nullptr) return true;
+        if (*(this->data) == *(iter.data))
+            return false;
+        return true;
     }
 
     iter *operator++()
@@ -75,14 +82,20 @@ public:
         }
         else
         {
-            throw std::exception();
+            //throw std::exception();
             return this;
         }
     }
 
     T operator*() {
+        //if(val != nullptr){
         auto val = this->data;
-         return *val; }
+         return *val;
+        //  } else {
+        //     return nullptr;
+        //  }
+
+         }
 };
 
 
@@ -125,7 +138,7 @@ public:
 
     my_allocator() noexcept : pool(::operator new(sizeof(T)*poolSize))
     {
-        check_assert();
+        //check_assert();
     };
 
     template <class U,std::size_t M>
@@ -212,25 +225,28 @@ public:
     int size_() { return this->size; }
 
     T at(int a) { return this->this_element->element; }
-    // TODO: Доделать реализацию пуш бэка и все готово
-    void push_back(const T &element) {
-        // WARNING: Не очень понимаю данную строчку
-        // typename allocat::template rebind<single_element<T>>::other nodeAlloc;
-        //single_element<T> * newNode = nodeAlloc.allocate(1);
-         T* newData = std::allocator_traits<T>::allocate(alloc, 1);
+    void push_back(const T &elemente) {
+         typename allocat::template rebind<single_element<T>>::other nodeAlloc;
+        auto sin_el = std::allocator_traits<decltype(nodeAlloc)>::allocate(nodeAlloc,1);
+        reinterpret_cast<single_element<T>*>(sin_el)->next_element = nullptr;
         if(first_element == nullptr){
-           // first_element = newNode;
+           first_element = sin_el;
+            std::allocator_traits<allocat>::construct(alloc, &first_element->element, elemente);
+            this_element = first_element;
+        } else {
+            auto previos_el = this_element;
+            this_element = sin_el;
+            previos_el->next_element = sin_el;
+            
+                std::allocator_traits<allocat>::construct(alloc, &this_element->element, elemente); 
         }
-       // this_element->next_element = newNode;
-       // this_element = newNode;
-       // std::allocator_traits<T>::construct(alloc, newNode, element);
     }
 
     iterator begin() { return iterator(first_element); }
 
     const_iterator cbegin() { return const_iterator(first_element); }
 
-    iterator end() { return iterator(last_element); }
+    iterator end() { return iterator(this_element); }
 
-    const_iterator cend() { return const_iterator(last_element); }
+    const_iterator cend() { return const_iterator(this_element); }
 };

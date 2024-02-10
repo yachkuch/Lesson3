@@ -97,6 +97,7 @@ for (const auto &el : list) {
   while (a1 != b1)
   {
     std::cout<<a1.operator*().element<<std::endl;
+    a1.operator++();
   }
   
   for (const auto &el : container) {
