@@ -1,10 +1,12 @@
 #pragma once
 
 #include <assert.h>
+#include <iostream>
 #include <iterator>
 #include <memory>
-#include <iostream>
+#include <array>
 
+#define UNUSED(expr) do { (void)(expr); } while (0)
 
 void print(std::string str) { std::cout << str << std::endl; }
 
@@ -29,15 +31,20 @@ struct single_element
 {
     void *next_element = nullptr;
     T element;
-    
-    single_element(T _val) : element(_val), next_element(nullptr){}
-    bool operator != (const  single_element & val ){
-        if((this->element == val.element) && (this->next_element == val.next_element)) return false;
+
+    single_element(T _val) : element(_val), next_element(nullptr) {}
+    bool operator!=(const single_element &val)
+    {
+        if ((this->element == val.element) &&
+            (this->next_element == val.next_element))
+            return false;
         return true;
     }
-    bool operator ==(const  single_element & val){
-        if(&val == nullptr) return false;
-        if(((this->element == val.element) && (this->next_element == val.next_element)) ) return true;
+    bool operator==(const single_element &val)
+    {
+        if (((this->element == val.element) &&
+             (this->next_element == val.next_element)))
+            return true;
         return false;
     }
 };
@@ -66,8 +73,8 @@ public:
 
     bool operator!=(const iter<T> &iter)
     {
-        //if(this->data->next_element == nullptr) return true;
-        //if(iter.data->next_element == nullptr) return true;
+        // if(this->data->next_element == nullptr) return true;
+        // if(iter.data->next_element == nullptr) return true;
         if (*(this->data) == *(iter.data))
             return false;
         return true;
@@ -82,34 +89,27 @@ public:
         }
         else
         {
-            //throw std::exception();
+            // throw std::exception();
             return this;
         }
     }
 
-    T operator*() {
-        //if(val != nullptr){
+    T &operator*()
+    {
         auto val = this->data;
-         return *val;
-        //  } else {
-        //     return nullptr;
-        //  }
-
-         }
+        return *val;
+    }
 };
-
-
-
-
 
 /// @brief Аллокатор для контейнера
 /// @tparam T
-template <class T ,std::size_t size = 1000>
+template <class T, std::size_t size = 1000>
 class my_allocator
 {
 private:
     constexpr static int poolSize = size;
-    
+    void *pool_start = nullptr; //! Хранит в себе адрес на анчало пула 
+
     int number_allocate_elements = 0;
 
     void check_assert()
@@ -120,14 +120,13 @@ private:
     }
 
 public:
-    //std::shared_ptr<void> pool;
-    void *pool;
+    // std::shared_ptr<void> pool;
     using value_type = T;
-
-    typedef value_type* pointer;
-    typedef const value_type* const_pointer;
-    typedef value_type& reference;
-    typedef const value_type& const_reference;
+    void *pool = nullptr;
+    typedef value_type *pointer;
+    typedef const value_type *const_pointer;
+    typedef value_type &reference;
+    typedef const value_type &const_reference;
     typedef std::size_t size_type;
     typedef std::ptrdiff_t difference_type;
 
@@ -136,13 +135,14 @@ public:
     using propagate_on_container_swap =
         std::true_type; // UB if std::false_type and a1 != a2;
 
-    my_allocator() noexcept : pool(::operator new(sizeof(T)*poolSize))
-    {
-        //check_assert();
-    };
+    my_allocator()
+        : pool(::operator new(sizeof(T) * poolSize)){
+              // check_assert();
+              this->pool_start = pool;
+          };
 
-    template <class U,std::size_t M>
-    my_allocator(const my_allocator<U,M> &alloc) noexcept
+    template <class U, std::size_t M>
+    my_allocator(const my_allocator<U, M> &alloc) noexcept
     {
         pool = alloc.pool;
     }
@@ -153,32 +153,38 @@ public:
         return my_allocator<T>();
     }
     T *allocate(std::size_t n)
-    {       
-        if((number_allocate_elements+n) > poolSize) std::bad_alloc();     
+    {
+        if ((number_allocate_elements + n) > poolSize)
+            throw std::bad_alloc();
         if (n <= poolSize)
         {
             auto buff = number_allocate_elements;
-            number_allocate_elements+=n;
-            return static_cast<T *>(pool + buff*sizeof(T));
-            }
+            number_allocate_elements += n;
+            return reinterpret_cast<T *>(reinterpret_cast<char *>(pool) +
+                                         buff * sizeof(T));
+        }
         else
         {
-            std::bad_alloc();
+            throw std::bad_alloc();
         }
     }
-    void deallocate(T *p, std::size_t n) { number_allocate_elements = 0; }
+    void deallocate(T *p, std::size_t n)
+    {
+        UNUSED(p);
+        if (number_allocate_elements == 0)
+            return;
+            if(n<number_allocate_elements){
+            number_allocate_elements-=n;
+            pool = reinterpret_cast<char*>(pool)-sizeof(T)*n;
+            } else{
+                number_allocate_elements = 0;
+                pool = pool_start;
+            }
+    }
 
-    // template <class Up, class... Args>
-    // void construct(Up* p, Args&&... args) {
-    //     ::new ((void*)p) Up(std::forward<Args>(args)...);
-    // }
-
-    // void destroy(pointer p) {
-    //     p->~T();
-    // }
-
-    template<typename U>
-    struct rebind {
+    template <typename U>
+    struct rebind
+    {
         typedef my_allocator<U, size> other;
     };
 };
@@ -216,30 +222,51 @@ private:
     std::size_t capcity = 0; // Сколько памяти отсалось зарезервированной
 
 public:
-    My_container(int reserved_size) :alloc(allocat()){
+    explicit My_container(int reserved_size)
+        : alloc(allocat()){
 
-    };
+          };
 
     My_container() = default;
+    ~My_container()
+    {
+        if(first_element == nullptr) return;
+        while (first_element->next_element != nullptr)
+        {
+          auto* single_el = this->first_element;
+        this->first_element = reinterpret_cast<single_element<T> *>( single_el->next_element);
+        delete single_el;  
+        }
+        delete first_element;
+        return;
+    }
 
     int size_() { return this->size; }
 
     T at(int a) { return this->this_element->element; }
-    void push_back(const T &elemente) {
-         typename allocat::template rebind<single_element<T>>::other nodeAlloc;
-        auto sin_el = std::allocator_traits<decltype(nodeAlloc)>::allocate(nodeAlloc,1);
-        reinterpret_cast<single_element<T>*>(sin_el)->next_element = nullptr;
-        if(first_element == nullptr){
-           first_element = sin_el;
-            std::allocator_traits<allocat>::construct(alloc, &first_element->element, elemente);
+    void push_back(const T &elemente)
+    {
+        typename allocat::template rebind<single_element<T>>::other nodeAlloc;
+        auto sin_el =
+            std::allocator_traits<decltype(nodeAlloc)>::allocate(nodeAlloc, 1);
+        reinterpret_cast<single_element<T> *>(sin_el)->next_element = nullptr;
+        if (first_element == nullptr)
+        {
+            first_element = sin_el;
+            std::allocator_traits<allocat>::construct(alloc, &first_element->element,
+                                                      elemente);
             this_element = first_element;
-        } else {
+        }
+        else
+        {
             auto previos_el = this_element;
             this_element = sin_el;
             previos_el->next_element = sin_el;
-            
-                std::allocator_traits<allocat>::construct(alloc, &this_element->element, elemente); 
+
+            std::allocator_traits<allocat>::construct(alloc, &this_element->element,
+                                                      elemente);
         }
+        this->size++;
     }
 
     iterator begin() { return iterator(first_element); }
